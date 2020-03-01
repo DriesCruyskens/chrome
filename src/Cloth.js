@@ -17,6 +17,8 @@ export default class Cloth {
             smoothing: 42,
             radius: 2.5,
             smoothing_method: 'geometric',
+            smoothing_sampling: 'radius',
+            path_noise_smoothing: 1.,
             inner_hole: 0,
             x_multiplier: 18,
             y_multiplier: 18,
@@ -108,10 +110,19 @@ export default class Cloth {
                 } else {
                     path.add(new paper.Point(xy[0], xy[1]))
                 }
-                
+                if (this.params.smoothing_sampling == 'noise') {
+                    let smoothing = this.params.path_noise_smoothing.map(0, 1, 0, 1);
+                    let factor = this.noise3D(r/smoothing, angle/smoothing, this.params.seed)
+                    factor = factor.map(-1, 1, 0, 1)
+                    path.smooth({ 
+                        factor: factor, 
+                        type: this.params.smoothing_method,
+                        from: -1,
+                        to:  -2})
+                }
             }
-            //path.closePath();
-            let factor = this.params.inversed ? r.map(0, 1, 1, 0): r.map(0,1,0,1)
+            if (this.params.smoothing_sampling == 'radius') {
+                let factor = this.params.inversed ? r.map(0, 1, 1, 0): r.map(0,1,0,1)
 
             if (this.params.smooth_path) {
                 
@@ -130,6 +141,8 @@ export default class Cloth {
                     })
                 }
             }
+            }
+            
         }
         this.params.path_method == 'spiral'? path.removeSegment(path.segments.length-1): null
     }
@@ -163,8 +176,6 @@ export default class Cloth {
             xoffset = xoffset.map(-1, 1, 0, 1)
             yoffset = yoffset.map(-1, 1, 0, 1)
         }
-
-        
 
         x = x - xoffset * this.params.x_multiplier
         y = y - yoffset * this.params.y_multiplier
@@ -270,6 +281,16 @@ export default class Cloth {
 
         polygons.add(this.params, 'smoothing_method', [/* 'continuous', 'asymmetric',  */'catmull-rom', 'geometric']).onChange((value) => {
             this.params.smoothing_method = value;
+            this.reset();
+        });
+
+        polygons.add(this.params, 'smoothing_sampling', ['radius', 'noise']).onChange((value) => {
+            this.params.smoothing_sampling = value;
+            this.reset();
+        });
+
+        polygons.add(this.params, 'path_noise_smoothing', 0, 1).onChange((value) => {
+            this.params.path_noise_smoothing = value;
             this.reset();
         });
 
