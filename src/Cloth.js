@@ -8,18 +8,21 @@ export default class Cloth {
 
     constructor(canvas_id) {
         this.params = {
+            map: true,
             polygons: true,
             inversed: false,
             n_polygons: 100,
-            n_vertices: 3,
-            smoothing: 123,
+            n_vertices: 20,
+            seed: 1000,
+            smoothing: 42,
             radius: 2.5,
-            theta_increment: 585,
+            smoothing_method: 'geometric',
             inner_hole: 0,
-            x_multiplier: 45,
-            y_multiplier: 45,
+            x_multiplier: 18,
+            y_multiplier: 18,
             smooth_path: true,
             polar: false,
+            path_method: 'spiral',
             moire: true,
             moire_x: 3,
             moire_y: 3,
@@ -45,10 +48,35 @@ export default class Cloth {
         this.reset();
     }
 
+    randomize() {
+        this.params = {
+            map: Boolean(Math.round(Math.random())),
+            polygons: true,
+            inversed: false,
+            n_polygons: 100,
+            n_vertices: 3, //Math.random() > .5 ? 20 : 3,
+            seed: Math.random()*1000,
+            smoothing: Math.random()*40 + 140,
+            radius: 2.5,
+            smoothing_method: 'geometric',
+            inner_hole: 0,
+            x_multiplier: Math.random()*45,
+            y_multiplier: Math.random()*45,
+            smooth_path: true,
+            polar: Boolean(Math.round(Math.random())),
+            path_method: 'spiral',
+            moire: true,
+            moire_x: 3,
+            moire_y: 3,
+            angle_offset: Math.random()*6 - 3
+        }
+        this.reset()
+    }
+
     reset() {
         paper.project.currentStyle = {
             strokeColor: 'black',
-            //fillColor: '#00000011'
+            //fillColor: '#0000FF01'
         };
         
         paper.project.clear();
@@ -64,11 +92,14 @@ export default class Cloth {
     render(moire) {
         let n_polygons = this.params.n_polygons;
         let n_vertices = this.params.n_vertices;
+        let path
+        this.params.path_method == 'spiral' ? path=new paper.Path() : null
+
         for (let r = this.params.inner_hole; r < 1; r += 1/n_polygons) {
-            let path = new paper.Path();
-            
+
+            this.params.path_method == 'polygons' ? path=new paper.Path() : null
             for (let j = 0; j < 1; j += 1/n_vertices) {
-                let angle = (6.28318530718 / n_vertices) * j * n_vertices ;
+                let angle = ((Math.PI * 2 / n_vertices) * j * n_vertices) ;
                 angle += r * this.params.angle_offset
                 
                 let xy = this.position_texture(r, angle)
@@ -79,12 +110,28 @@ export default class Cloth {
                 }
                 
             }
-            path.closePath();
+            //path.closePath();
             let factor = this.params.inversed ? r.map(0, 1, 1, 0): r.map(0,1,0,1)
+
             if (this.params.smooth_path) {
-                this.params.polygons? path.smooth({ factor: factor, type: "geometric" }) : path.smooth({ factor: factor, type: "asymmetric" }); // catmull-rom, geometric, assymetric
+                
+                if (this.params.path_method == 'spiral') {
+                    path.smooth({ 
+                        factor: factor, 
+                        type: this.params.smoothing_method,
+                        from: -1,
+                        to: -n_vertices-2 })
+            
+                } else if (this.params.path_method == 'polygons') {
+                    path.closePath()
+                    path.smooth({ 
+                        factor: factor, 
+                        type: this.params.smoothing_method
+                    })
+                }
             }
         }
+        this.params.path_method == 'spiral'? path.removeSegment(path.segments.length-1): null
     }
 
     position_texture(r, theta) {
@@ -105,12 +152,18 @@ export default class Cloth {
         let xoffset;
         if (this.params.polar) {
             const smoothing = this.params.smoothing.map(0, 200, 0, 1);
-            yoffset = this.noise3D(r/smoothing, theta/smoothing, 0)
-            xoffset = this.noise3D(r/smoothing, theta/smoothing, 0)
+            yoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed)
+            xoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed)
         } else {
-            yoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, 0)
-            xoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, 0)
+            yoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed)
+            xoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed)
         }
+
+        if (this.params.map) {
+            xoffset = xoffset.map(-1, 1, 0, 1)
+            yoffset = yoffset.map(-1, 1, 0, 1)
+        }
+
         
 
         x = x - xoffset * this.params.x_multiplier
@@ -120,8 +173,25 @@ export default class Cloth {
     }
 
     init_gui() {
+        this.gui.add(this.params, 'map').onChange((value) => {
+            this.params.map = value;
+            this.reset();
+        });
+
+        this.gui.add(this.params, 'path_method', ['spiral', 'polygons',]).onChange((value) => {
+            this.params.path_method = value;
+            this.reset();
+        });
+
+        this.gui.add(this, 'randomize').name('Randomize');
+
         let noise = this.gui.addFolder('noise');
 
+        noise.add(this.params, 'seed', 0, 2000).onChange((value) => {
+            this.params.seed = value;
+            this.reset();
+        });
+        
         noise.add(this.params, 'smoothing', 0, 200).onChange((value) => {
             this.params.smoothing = value;
             this.reset();
@@ -161,11 +231,6 @@ export default class Cloth {
 
         let polygons = this.gui.addFolder('polygons');
 
-        polygons.add(this.params, 'polygons').onChange((value) => {
-            this.params.polygons = value;
-            this.reset();
-        });
-
         polygons.add(this.params, 'inversed').onChange((value) => {
             this.params.inversed = value;
             this.reset();
@@ -181,7 +246,7 @@ export default class Cloth {
             this.reset();
         });
 
-        polygons.add(this.params, 'angle_offset', 0, 3).onChange((value) => {
+        polygons.add(this.params, 'angle_offset', -3, 3).onChange((value) => {
             this.params.angle_offset = value;
             this.reset();
         });
@@ -203,13 +268,17 @@ export default class Cloth {
             this.reset();
         });
 
-        this.gui.add(this.functions, 'export_svg').name('Export SVG');
+        polygons.add(this.params, 'smoothing_method', [/* 'continuous', 'asymmetric',  */'catmull-rom', 'geometric']).onChange((value) => {
+            this.params.smoothing_method = value;
+            this.reset();
+        });
+
+        this.gui.add(this, 'exportSVG').name('Export SVG');
     }
 
     exportSVG() {
-
         var svg = paper.project.exportSVG({asString: true});
         var blob = new Blob([svg], {type: "image/svg+xml;charset=utf-8"});
-        saveAs(blob, 'superformula.svg');
+        saveAs(blob, 'chromecloth' + JSON.stringify(this.params) + '.svg');
     }
 }
