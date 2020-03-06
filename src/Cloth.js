@@ -28,11 +28,8 @@ export default class Cloth {
             moire: true,
             moire_x: 3,
             moire_y: 3,
-            angle_offset: 1.00
-        }
-
-        this.functions = {
-            export_svg: this.exportSVG,
+            angle_offset: 1.00,
+            single_axis_noise: true,
         }
 
         Number.prototype.map = function (in_min, in_max, out_min, out_max) {
@@ -61,6 +58,8 @@ export default class Cloth {
             smoothing: Math.random()*40 + 140,
             radius: 2.5,
             smoothing_method: 'geometric',
+            smoothing_sampling: 'radius',
+            path_noise_smoothing: 1.,
             inner_hole: 0,
             x_multiplier: Math.random()*45,
             y_multiplier: Math.random()*45,
@@ -108,7 +107,7 @@ export default class Cloth {
                 if (moire == "moire") {
                     path.add(new paper.Point(xy[0] + this.params.moire_x, xy[1] + this.params.moire_y))
                 } else {
-                    path.add(new paper.Point(xy[0], xy[1]))
+                    path.add(new paper.Point(xy))
                 }
                 if (this.params.smoothing_sampling == 'noise') {
                     let smoothing = this.params.path_noise_smoothing.map(0, 1, 0, 1);
@@ -161,14 +160,14 @@ export default class Cloth {
         let x = r * Math.cos(theta) * radius + paper.view.center.x;
         let y = r * Math.sin(theta) * radius + paper.view.center.y;
 
-        let yoffset;
-        let xoffset;
+        let yoffset, xoffset, z
         if (this.params.polar) {
             const smoothing = this.params.smoothing.map(0, 200, 0, 1);
-            yoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed)
+            yoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed + 20000)
             xoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed)
         } else {
-            yoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed)
+            z = this.params.single_axis_noise ? 0 : 200000
+            yoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed + z) // if z is the same, has no effect on certain axis
             xoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed)
         }
 
@@ -223,6 +222,11 @@ export default class Cloth {
             this.reset();
         });
 
+        noise.add(this.params, 'single_axis_noise').onChange((value) => {
+            this.params.single_axis_noise = value;
+            this.reset();
+        });
+
         let moire = this.gui.addFolder('moire');
 
         moire.add(this.params, 'moire').onChange((value) => {
@@ -252,7 +256,7 @@ export default class Cloth {
             this.reset();
         });
 
-        polygons.add(this.params, 'n_vertices', 3, 20).step(1).onChange((value) => {
+        polygons.add(this.params, 'n_vertices', 3, 50).step(1).onChange((value) => {
             this.params.n_vertices = value;
             this.reset();
         });
