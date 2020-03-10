@@ -161,12 +161,12 @@ export default class Cloth {
         let y = r * Math.sin(theta) * radius + paper.view.center.y;
 
         let yoffset, xoffset, z
+        z = this.params.single_axis_noise ? 0 : 200000
         if (this.params.polar) {
             const smoothing = this.params.smoothing.map(0, 200, 0, 1);
-            yoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed + 20000)
+            yoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed + z)
             xoffset = this.noise3D(r/smoothing, theta/smoothing, this.params.seed)
         } else {
-            z = this.params.single_axis_noise ? 0 : 200000
             yoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed + z) // if z is the same, has no effect on certain axis
             xoffset = this.noise3D(x/this.params.smoothing, y/this.params.smoothing, this.params.seed)
         }
