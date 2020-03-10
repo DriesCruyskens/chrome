@@ -13,7 +13,7 @@ export default class Cloth {
             inversed: false,
             n_polygons: 100,
             n_vertices: 20,
-            seed: 1000,
+            seed: 1001,
             smoothing: 42,
             radius: 2.5,
             smoothing_method: 'geometric',
