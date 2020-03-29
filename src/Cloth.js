@@ -2,7 +2,6 @@ import * as dat from 'dat-gui';
 import { makeNoise3D } from "open-simplex-noise";
 import * as paper from 'paper';
 import { saveAs } from 'file-saver';
-import * as _ from 'lodash';
 
 export default class Cloth {
 
@@ -251,7 +250,7 @@ export default class Cloth {
             this.reset();
         });
 
-        polygons.add(this.params, 'n_polygons', 50, 200).step(1).onChange((value) => {
+        polygons.add(this.params, 'n_polygons', 0, 200).step(1).onChange((value) => {
             this.params.n_polygons = value;
             this.reset();
         });
