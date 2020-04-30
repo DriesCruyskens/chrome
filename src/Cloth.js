@@ -29,6 +29,7 @@ export default class Cloth {
             moire_y: 3,
             angle_offset: 3.00,
             single_axis_noise: true,
+            strokeWidth: 1.,
         }
 
         Number.prototype.map = function (in_min, in_max, out_min, out_max) {
@@ -76,6 +77,7 @@ export default class Cloth {
     reset() {
         paper.project.currentStyle = {
             strokeColor: 'black',
+            strokeWidth: this.params.strokeWidth,
             //fillColor: '#0000FF01'
         };
         
@@ -266,7 +268,7 @@ export default class Cloth {
         });
         
 
-        polygons.add(this.params, 'radius', 2, 10).onChange((value) => {
+        polygons.add(this.params, 'radius', 2, 20).onChange((value) => {
             this.params.radius = value;
             this.reset();
         });
@@ -296,6 +298,13 @@ export default class Cloth {
             this.params.path_noise_smoothing = value;
             this.reset();
         });
+
+        let style = this.gui.addFolder("style");
+
+        style.add(this.params, 'strokeWidth', 0, 5).onChange((value) => {
+            this.params.strokeWidth = value;
+            this.reset();
+        })
 
         this.gui.add(this, 'exportSVG').name('Export SVG');
     }
